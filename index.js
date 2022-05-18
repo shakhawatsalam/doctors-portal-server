@@ -48,6 +48,35 @@ async function run() {
             res.send(service);
         });
 
+        //dashboard All Users
+        app.get('/user', verifyJWT, async (req, res) => {
+            const users = await usersCollection.find().toArray();
+            res.send(users);
+        });
+
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await usersCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin });
+        })
+        // for admin role 
+        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const requester = req.decoded.email;
+            const reqesterAccount = await usersCollection.findOne({ email: requester })
+            if (reqesterAccount.role === 'admin') {
+                const filter = { email: email };
+                const updateDoc = {
+                    $set: { role: 'admin' },
+                };
+                const result = await usersCollection.updateOne(filter, updateDoc);
+                res.send(result);
+            } else {
+                res.status(403).send({ message: 'forbidden' });
+            }
+        })
+
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -105,7 +134,7 @@ async function run() {
                 const booking = await bookingCollection.find(query).toArray();
                 res.send(booking);
             } else {
-                return res.status(403).send({message: `forbidden access`})
+                return res.status(403).send({ message: `forbidden access` })
             }
         })
 
